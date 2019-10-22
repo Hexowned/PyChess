@@ -98,3 +98,142 @@ class Board:
                     self.board[i][j].draw(window, color)
                     if self.board[i][j].is_selected:
                         s = (i, j)
+
+    def get_danger_moves(self, color):
+        danger_moves = []
+        for i in range(self.rows):
+            for j in range(self.columns):
+                if self.board[i][j] != 0:
+                    if self.board[i][j].color != color:
+                        for move in self.board[i][j].move_list:
+                            danger_moves.append(move)
+
+        return danger_moves
+
+    def is_checked(self, color):
+        self.update_moves()
+        danger_moves = self.get_danger_moves(color)
+        king_position = (-1, -1)
+        for i in range(self.rows):
+            for j in range(self.columns):
+                if self.board[i][j] != 0:
+                    if self.board[i][j].king and self.board[i][j].color == color:  # noqa E501
+                        king_position = (j, i)
+
+        if king_position in danger_moves:
+            return True
+
+        return False
+
+    def select(self, column, row, color):
+        changed = False
+        previous = (-1, -1)
+        for i in range(self.rows):
+            for j in range(self.columns):
+                if self.board[i][j] != 0:
+                    if self.board[i][j] != 0:
+                        if self.board[i][j].selected:
+                            previous = (i, j)
+
+        if self.board[row][column] == 0 and previous != (-1, -1):
+            moves = self.board[previous[0]][previous[1]].move_list
+            if (column, row) in moves:
+                changed = self.move(previous, (row, column), color)
+        else:
+            if previous == (-1, -1):
+                self.reset_selected()
+                if self.board[row][column] != 0:
+                    self.board[row][column].selected = True
+            else:
+                if self.board[previous[0]][previous[1]].color != self.board[row][column].color:  # noqa E501
+                    moves = self.board[previous[0]][previous[1]].move_list
+                    if (column, row) in moves:
+                        changed = self.move(previous, (row, column), color)
+
+                    if self.board[row][column].color == color:
+                        self.board[row][column].selected = True
+                else:
+                    if self.board[row][column].color == color:
+                        # castle-ing
+                        self.reset_selected()
+                        if self.board[previous[0]][previous[1]].moved == False and self.board[previous[0]][previous[1]].rook and self.board[row][column].king and column != previous[1] and previous != (-1, -1):  # noqa E501
+                            castle = True
+                            if previous[1] < column:
+                                for j in range(previous[1] + 1, column):
+                                    if self.board[row][j] != 0:
+                                        castle = False
+
+                                if castle:
+                                    changed = self.move(
+                                        previous, (row, 3), color)
+                                    changed = self.move(
+                                        (row, column), (row, 2), color)
+                                if not changed:
+                                    self.board[row][column].selected = True
+                            else:
+                                for j in range(column + 1, previous[1]):
+                                    if self.board[row][j] != 0:
+                                        castle = False
+
+                                if castle:
+                                    changed = self.move(
+                                        previous, (row, 6), color)
+                                    changed = self.move(
+                                        (row, column), (row, 5), color)
+                                if not changed:
+                                    self.board[row][column].selected = True
+                        else:
+                            self.board[row][column].selected = True
+        if changed:
+            if self.turn == "white":
+                self.turn = "black"
+                self.reset_selected()
+            else:
+                self.turn = "white"
+                self.reset_selected()
+
+    def reset_selected(self):
+        for i in range(self.rows):
+            for j in range(self.columns):
+                if self.board[i][j] != 0:
+                    self.board[i][j].selected = False
+
+    def check_mate(self, color):
+        pass  # TODO: need to implement this correctly
+
+    def move(self, start, end, color):
+        checkedBefore = self.is_checked(color)
+        changed = True
+        nBoard = self.board[:]
+        if nBoard[start[0]][start[1]].pawn:
+            nBoard[start[0]][start[1]].first = False
+
+        nBoard[start[0]][start[1]].change_pos((end[0], end[1]))
+        nBoard[end[0]][end[1]] = nBoard[start[0]][start[1]]
+        nBoard[start[0]][start[1]] = 0
+        self.board = nBoard
+
+        if self.is_checked(color) or (checkedBefore and self.is_checked(color)):  # noqa E501
+            changed = False
+            nBoard = self.board[:]
+            nBoard = self.board[:]
+            if nBoard[end[0]][end[1]].pawn:
+                nBoard[end[0]][end[1]].first = True
+
+            nBoard[end[0]][end[1]].change_pos((start[0], start[1]))
+            nBoard[start[0]][start[1]] = nBoard[end[0]][end[1]]
+            nBoard[end[0]][end[1]] = 0
+            self.board = nBoard
+        else:
+            self.reset_selected()
+
+        self.update_moves()
+        if changed:
+            self.last = [start, end]
+            if self.turn == "white":
+                self.storedTime1 += (time.time() - self.startTime)
+            else:
+                self.storedTime2 += (time.time() - self.startTime)
+            self.startTime = time.time()
+
+        return changed

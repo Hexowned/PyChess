@@ -1,4 +1,4 @@
-import pygame
+import pygame   # noqa E902
 import os
 import time
 import pickle
@@ -42,7 +42,7 @@ def menu_screen(window, name):
                     run = False
                     main()
                     break
-                except:
+                except:  # noqa E722
                     print("Server Offline")
                     offline = True
 
@@ -134,7 +134,7 @@ def click(position):
             divX = x - rect[0]
             divY = y - rect[1]
             i = int(divX / (rect[2] / 8)
-            j=int(divY / (rect[3] / 8))
+            j = int(divY / (rect[3] / 8))
             return i, j
 
     return -1, -1
